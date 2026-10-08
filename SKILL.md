@@ -2,7 +2,7 @@
 name: short-drama-prehook-production
 description: 按三种模式制作短剧 AI 二创前贴，或为原片/已完成前贴添加吸睛旁白；核验原片、处理付费确认、原声字幕、拼接与成片验收，也用于分发和更新制作规则。
 metadata:
-  version: 1.1.0
+  version: 1.1.1
 ---
 
 # 短剧二创前贴制作
