@@ -13,4 +13,6 @@
 
 使用共享 Git 仓库时，同事把仓库克隆到自己的 `~/.codex/skills/short-drama-prehook-production`，以后在该目录执行 `git pull --ff-only`。使用 ZIP 时，先解压，再运行包内的 `scripts/install-update.ps1 -Package <ZIP绝对路径>`；默认安装到当前用户 Codex Skills 目录，项目级安装可额外传 `-TargetSkillsDir <项目\.agents\skills>`。脚本会先验证包结构，旧版保留为同目录时间戳备份，再装新版。重启或刷新会话后用 `$short-drama-prehook-production` 调用。
 
-当前远端为私有仓库 `https://github.com/nancy-ship-it-529/short-drama-prehook-production`。同事须先被邀请并接受访问；发布者推送新版后，同事执行 `git pull --ff-only` 才会更新。Git 更新只同步 Skill，不会同步工作台代码、视频、账号或密钥；仍需确认各自工作台版本匹配。
+当前远端为公开仓库 `https://github.com/nancy-ship-it-529/short-drama-prehook-production`。任何人可直接查看、下载和克隆，无需邀请；写入主仓库仍需维护者授权。发布者推送新版后，接收者执行 `git pull --ff-only` 才会更新，不会自动同步。Git 更新只同步 Skill，不会同步工作台代码、视频、账号或密钥；仍需确认各自工作台版本匹配。
+
+公开发布前检查本次文件与 Git 历史，不提交密钥、认证数据、用户原片、任务记录或非公开业务资料。分享规则不等于分享模型额度或素材使用权。

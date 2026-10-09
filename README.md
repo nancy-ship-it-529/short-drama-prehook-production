@@ -2,7 +2,7 @@
 
 此仓库只分享制作规则与更新脚本，不包含原片、任务、模型密钥或工作台程序。
 
-共享仓库：`https://github.com/nancy-ship-it-529/short-drama-prehook-production`（私有）。仓库所有者先在 GitHub 的 Settings → Collaborators 邀请同事；同事接受邀请后才能克隆。
+共享仓库：`https://github.com/nancy-ship-it-529/short-drama-prehook-production`（公开）。任何人均可查看、下载和克隆，无需邀请；向主仓库写入仍需维护者授权。
 
 首次使用：把本仓库克隆到自己的 Codex Skills 目录，文件夹名保持 `short-drama-prehook-production`；随后在 Codex 中使用 `$short-drama-prehook-production`。Windows PowerShell 示例：
 
