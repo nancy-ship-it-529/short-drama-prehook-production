@@ -30,12 +30,12 @@ test('clean recipient can open four-mode UI and empty library without shared cre
       catch { await new Promise(resolve => setTimeout(resolve, 150)); }
     }
     assert.equal(health?.ok, true);
-    assert.equal(health.version, '3.5.1');
+    assert.equal(health.version, '3.6.0');
     assert.deepEqual(health.modes, ['short', 'long', 'remake', 'curious']);
     assert.equal(health.ocrInstalled, false);
     const page = await (await fetch(base + '/')).text();
     assert(page.includes('data-mode="curious"') && page.includes('四个流程同时开始制作'));
-    assert(page.includes('3.5.1') && page.includes('成片库'));
+    assert(page.includes('3.6.0') && page.includes('成片库'));
     assert.deepEqual((await (await fetch(base + '/api/library')).json()).items, []);
     assert.deepEqual((await (await fetch(base + '/api/batches')).json()).batches, []);
     const capabilities = await (await fetch(base + '/api/pipeline/capabilities')).json();

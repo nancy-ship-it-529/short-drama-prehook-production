@@ -179,9 +179,10 @@ ${PREHOOK_CAPTION_RULES}
 方案数量：${input.count}条
 补充要求：${input.notes || '无'}
 
-先按 $short-drama-prehook-production 的猎奇规则，从接收者已授权的案例库检索同题材、同受众的样片；没有案例库则按当前素材创作并明确未做案例比对，不虚构历史案例。仅学习镜头信息量、行动因果和转场节奏，不照搬人物、道具或违法低俗情节。每条方案的异常载体和人物行动应有差异；不得机械安排动物说话、神秘人预言或无来由的全知路人。
+先按 $short-drama-prehook-production 的猎奇规则，从接收者已授权的案例库检索同题材、同受众的样片；没有案例库则按当前素材创作并明确未做案例比对，不虚构历史案例。仅学习镜头信息量、行动因果和转场节奏，不照搬人物、道具或情节。三条方案必须用不同的异常载体和人物行动，不能只更换动物或台词。
 
-核心结构：第一帧出现可辨的反常结果或人物反常举动 → 主角立即处理 → 处理引发更大后果或关键线索 → 人物以口语化的一句揭示或对白作出选择 → 用动作、视线、道具或问题接完整原片开头。猎奇来自剧情反常和信息反差，不来自脏污、排泄物、身体废弃物、羞辱、骚扰或危险模仿。默认近零空镜，每1–2秒有有效变化；多余走路、风景、重复震惊和无关特效都删除。是否出现动物取决于剧情，不强塞救助桥段。优先10–18秒，真有两次有效升级才可更长；Seedance单段只能4–15秒，长剧本按完整动作节点拆段，不压缩对白。
+前三秒是硬门槛：0.00秒就出现可辨且与本剧冲突有关的视觉异变；3.00秒前完成“异常发生→人物看见/触碰到后果→立即行动”三个可见节拍，不用空镜、走路、铺垫性旁白或长对白占据前三秒。每个方案的首个Seedance提示词代码块必须单列“前三秒钩子：0.00-3.00秒｜具体异变→可见后果→人物动作”，把三个节拍拍得到的画面写清；不能只写“震惊”“悬疑”“猎奇”这类形容词。适合原片时可选不同钩子：道具指甲片突然脱落/指甲纹样裂成异色光、发束瞬间散落露出关键记号、特效蛇从高处落在成年角色衣袖上引出线索、黄鼠狼灵影掠到人物面前指向秘密。都是无血无伤的虚构特效，不出现真实动物受伤、咬人或可模仿危险动作；若与原片世界观不符就换同等强度的相关异变，绝不硬塞。镜头随即推进主角行动与后果升级，不靠脏污、排泄物、身体废弃物、羞辱或骚扰吸睛。
+动物告知版只在来源和剧情合理时使用：动物/灵影先以突发动作入镜，紧接一句能改变主角行动的短提醒，不先讲身世或解释设定；提醒说完再让主角立即行动，声音来源、口型与字幕逐字同步，不抢原片台词。三条方案中若有合理动物告知素材，至少给一条此类方案，但不得三条都重复动物模板。后续每1–2秒有有效变化，删除重复震惊和无关特效。优先10–18秒；Seedance单段只能4–15秒，长剧本按完整动作节点拆段，不截断对白。
 
 ${UNIFIED_PRODUCTION_RULES}
 
@@ -1183,7 +1184,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.5.1', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.6.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1297,7 +1298,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.5.1' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.6.0' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {

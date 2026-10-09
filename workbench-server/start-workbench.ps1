@@ -13,14 +13,14 @@ try {
   $url = "http://127.0.0.1:$($startupConfig.port)"
   $health = $null
   try { $health = Invoke-RestMethod -Uri "$url/api/health" -TimeoutSec 15 } catch {}
-  if ($health -and ($health.version -ne '3.5.1' -or $health.instance -ne $startupConfig.instance)) { throw '该端口已有另一工作台，请使用 -Port 3218，不要误打开旧版。' }
+  if ($health -and ($health.version -ne '3.6.0' -or $health.instance -ne $startupConfig.instance)) { throw '该端口已有另一工作台，请使用 -Port 3218，不要误打开旧版。' }
   if (-not $health) {
     Start-Process -FilePath $node -ArgumentList ('"' + (Join-Path $root 'server.js') + '"') -WorkingDirectory $root -WindowStyle Hidden -RedirectStandardOutput (Join-Path $root 'server.log') -RedirectStandardError (Join-Path $root 'server-error.log')
     foreach ($attempt in 1..20) {
       try { $health = Invoke-RestMethod -Uri "$url/api/health" -TimeoutSec 15; break } catch { Start-Sleep -Milliseconds 300 }
     }
   }
-  if (-not $health.ok -or $health.version -ne '3.5.1' -or $health.instance -ne $startupConfig.instance) { throw '启动未通过健康检查；请查看 server-error.log' }
+  if (-not $health.ok -or $health.version -ne '3.6.0' -or $health.instance -ne $startupConfig.instance) { throw '启动未通过健康检查；请查看 server-error.log' }
   if (-not $NoOpen) { Start-Process "$url/#workbench" }
   [pscustomobject]@{ URL = "$url/#workbench"; Version = $health.version; Modes = $health.modes -join ',' }
 } finally { Pop-Location }

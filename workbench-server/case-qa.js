@@ -10,6 +10,15 @@ function chunks(text, heading) {
   return matches.map((match, index) => ({ body: text.slice(match.index + match[0].length, matches[index + 1]?.index ?? text.length) }));
 }
 
+function validateCuriousOpening(prompt) {
+  const line = String(prompt || '').match(/^前三秒钩子[：:]\s*0(?:\.0+)?[-–—~至到]3(?:\.0+)?秒[｜|]\s*(.+)$/m)?.[1];
+  const beats = line?.split('→').map(item => item.trim()).filter(Boolean) || [];
+  if (beats.length !== 3 || beats.some(item => item.length < 4 || /^(震惊|悬疑|猎奇|反转)$/.test(item))) {
+    return ['猎奇首段须写“前三秒钩子：0.00-3.00秒｜具体异变→可见后果→人物动作”，三拍均为可拍画面'];
+  }
+  return [];
+}
+
 function validateGenerationPrompt(prompt, duration, mode) {
   const errors = [], text = String(prompt || '').trim();
   if (!text) return ['Seedance提示词为空'];
@@ -49,6 +58,7 @@ function validateCase(content, input = {}) {
       if (!params) { errors.push(`${prefix}生成参数不完整`); return; }
       const duration = Number(params[1]);
       if (duration < 4 || duration > 15) errors.push(`${prefix}时长必须在4至15秒之间`);
+      if (input.mode === 'curious' && blockIndex === 0) errors.push(...validateCuriousOpening(prompt).map(item => `${prefix}：${item}`));
       errors.push(...validateGenerationPrompt(prompt, duration, input.mode).map(item => `${prefix}：${item}`));
     });
     const captions = [...scheme.body.matchAll(/^\s*-\s*文案[123][：:]\s*(.+)$/gm)];
@@ -65,4 +75,4 @@ function validateCase(content, input = {}) {
   return { ok: errors.length === 0, errors, warnings, schemeCount: schemes.length };
 }
 
-module.exports = { validateCase, validateGenerationPrompt };
+module.exports = { validateCase, validateGenerationPrompt, validateCuriousOpening };

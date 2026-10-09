@@ -15,6 +15,8 @@ assert.deepEqual(Array.from(MODE_ORDER), ['short', 'long', 'remake', 'curious'],
 const prompt = buildPrompt({ dramaTitle: '测试剧', summary: '成年主角发现一个反常线索并查明真相。', source: '', genre: '都市悬疑', count: 3, notes: '' }, MODES.curious);
 assert(prompt.includes('$short-drama-prehook-production'));
 assert(prompt.includes('不要套用递进栏固定的动物施救报恩模板'));
+assert(prompt.includes('前三秒钩子：0.00-3.00秒'));
+assert(prompt.includes('道具指甲片') && prompt.includes('发束瞬间散落') && prompt.includes('黄鼠狼灵影'));
 assert(prompt.includes('00:00:00.000'));
 assert(!prompt.includes('递进剧情紧凑告知固定使用'));
 assert.throws(() => extractSpliceTarget('衔接完整原片：《C:\\素材\\测试.mp4》00:00:03.000', '', 'curious'), /不能裁剪原片/);
