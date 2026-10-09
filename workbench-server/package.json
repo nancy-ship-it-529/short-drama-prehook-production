@@ -1,0 +1,14 @@
+{
+  "name": "short-drama-prehook-workbench",
+  "version": "3.4.0",
+  "private": true,
+  "description": "Local four-lane prehook workbench; recipient-owned credentials required",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test tests/portable_release.test.js && node tests/dialogue_extraction.test.js",
+    "test:ui": "node tests/curious_mode.test.js && node tests/prehook_caption_flow.test.js && node tests/narration_ui.test.js",
+    "test:media": "node tests/text_hook_overlay.test.js"
+  },
+  "engines": { "node": ">=20" },
+  "devDependencies": { "playwright": "^1.55.0" }
+}

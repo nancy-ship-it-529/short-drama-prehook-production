@@ -21,9 +21,25 @@ if (-not $staging.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) 
 $stagedSkill = Join-Path $staging 'short-drama-prehook-production'
 New-Item -ItemType Directory -Path $stagedSkill -Force | Out-Null
 try {
-  foreach ($item in @('SKILL.md', 'README.md', 'references', 'scripts')) {
+  foreach ($item in @('SKILL.md', 'README.md', '.gitignore', 'references', 'scripts')) {
     $source = Join-Path $skillDir $item
     if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $stagedSkill -Recurse }
+  }
+  # Package release source by allowlist, never recursively copy runtime/job directories.
+  $appRoot = Join-Path $skillDir 'workbench-server'
+  if (Test-Path -LiteralPath $appRoot) {
+    $sourceFiles = @('server.js','runtime-config.js','start-workbench.ps1','stop-workbench.ps1','setup-workbench.ps1','requirements.txt','package.json','credentials.example.env','public\index.html')
+    foreach ($sourceDir in @('scripts','connectors','tests')) {
+      foreach ($entry in (Get-ChildItem -LiteralPath (Join-Path $appRoot $sourceDir) -Recurse -File)) {
+        $relative = $entry.FullName.Substring($appRoot.Length + 1)
+        if ($entry.Extension -in @('.py','.js') -and $relative -notmatch '(^|[\\/])(resources|__pycache__|node_modules)([\\/]|$)') { $sourceFiles += $relative }
+      }
+    }
+    foreach ($relative in $sourceFiles) {
+      $destination = Join-Path $stagedSkill ('workbench-server\' + $relative)
+      New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+      Copy-Item -LiteralPath (Join-Path $appRoot $relative) -Destination $destination
+    }
   }
   Compress-Archive -LiteralPath $stagedSkill -DestinationPath $archive
 } finally {

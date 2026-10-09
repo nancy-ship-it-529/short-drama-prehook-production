@@ -1,0 +1,9 @@
+edge-tts>=7,<8
+rapidocr-onnxruntime==1.4.4
+onnxruntime>=1.18,<2
+opencv-python-headless>=4.10,<5
+numpy>=1.26,<3
+pillow>=10,<13
+faster-whisper>=1.1,<2
+tos==2.9.2
+requests>=2.32,<3
