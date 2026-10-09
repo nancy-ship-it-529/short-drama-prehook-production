@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import re
 import subprocess
 from pathlib import Path
@@ -59,6 +60,18 @@ def split_line(value: str, limit: float, protected: list[tuple[int, int]]) -> in
     return min(options)[1]
 
 
+def caption_layout(text: str, yellow: str, red: str, width: int, height: int) -> tuple[int, list[str], int | None]:
+    protected = [(text.index(word), text.index(word) + len(word)) for word in (yellow, red) if word and word in text]
+    base_size = max(20, round(min(height * 0.055, width * 0.05)))
+    safe_width = width * 0.78 - 30
+    half_units = max(1, math.ceil(units(text) / 2))
+    font_size = max(20, min(base_size, math.floor(safe_width / (half_units * 0.92))))
+    line_limit = min(18 if height > width else 22, safe_width / (font_size * 0.92))
+    break_at = split_line(text, line_limit, protected)
+    lines = [text] if break_at is None else [text[:break_at], text[break_at:]]
+    return font_size, lines, break_at
+
+
 def render_text(value: str, yellow: str, red: str, break_at: int | None) -> str:
     if yellow and yellow not in value:
         raise ValueError("黄色重点词必须完整出现在文案中")
@@ -86,11 +99,9 @@ def render_text(value: str, yellow: str, red: str, break_at: int | None) -> str:
 
 
 def write_ass(target: Path, text: str, yellow: str, red: str, start: float, end: float, width: int, height: int, anchor: tuple[int, int]) -> None:
-    font_size = max(20, round(min(height * 0.055, width * 0.05)))
+    font_size, _, break_at = caption_layout(text, yellow, red, width, height)
     margin_left = round(width * 0.05)
     margin_bottom = round(height * (0.23 if height > width else 0.18))
-    protected = [(text.index(word), text.index(word) + len(word)) for word in (yellow, red) if word and word in text]
-    break_at = split_line(text, 15 if height > width else 14, protected)
     rendered = render_text(text, yellow, red, break_at)
     header = rf"""[Script Info]
 ScriptType: v4.00+
@@ -121,8 +132,8 @@ def main() -> None:
     text = str(request.get("narration") or "").strip()
     if text.startswith("“") and text.endswith("”"):
         text = text[1:-1].strip()
-    if not text or len(text) > 28 or "\n" in text or "\r" in text or any(char in text for char in r"{}\\"):
-        raise ValueError("请填写一条不超过28字、不含换行或特殊控制符的画面文案")
+    if not text or len(text) > 36 or "\n" in text or "\r" in text or any(char in text for char in r"{}\\"):
+        raise ValueError("请填写一条不超过36字、不含换行或特殊控制符的画面文案")
     speed = float(request.get("speed_factor", 1))
     if not 1 <= speed <= 1.2:
         raise ValueError("画面文案版倍速只能在1.0至1.2之间")
@@ -137,10 +148,7 @@ def main() -> None:
     ass_file = output_dir / "hook_text.ass"
     if not OCR_PYTHON.is_file() or not LAYOUT_SCRIPT.is_file():
         raise RuntimeError("本地 OCR 排版组件未就绪，已停止合成以免遮挡原字幕")
-    font_size = max(20, round(min(height * 0.055, width * 0.05)))
-    protected = [(text.index(word), text.index(word) + len(word)) for word in (yellow, red) if word and word in text]
-    break_at = split_line(text, 15 if height > width else 14, protected)
-    lines = [text] if break_at is None else [text[:break_at], text[break_at:]]
+    font_size, lines, _ = caption_layout(text, yellow, red, width, height)
     # Reserve a modest outline margin; the earlier overly generous estimate
     # pushed visually small text away from a usable lower-left gap.
     caption_width = round(max(units(line) for line in lines) * font_size * 0.92 + 30)

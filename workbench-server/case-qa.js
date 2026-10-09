@@ -67,7 +67,7 @@ function validateCase(content, input = {}) {
       const item = line[1].match(/^(.+?)\s*｜\s*黄色重点[：:]\s*([^｜]*)\s*｜\s*红色反转[：:]\s*([^｜]*)\s*$/);
       if (!item) { errors.push(`${label}文案${index + 1}格式不完整`); return; }
       const caption = item[1].trim(), yellow = item[2].trim(), red = item[3].trim();
-      if (caption.length > 28 || (yellow && !caption.includes(yellow)) || (red && !caption.includes(red))) errors.push(`${label}文案${index + 1}超长或强调词不在原句中`);
+      if (caption.length > 36 || (yellow && !caption.includes(yellow)) || (red && !caption.includes(red))) errors.push(`${label}文案${index + 1}超长或强调词不在原句中`);
     });
   });
   if (new Set(hooks).size !== hooks.length) errors.push('不同方案的钩子重复');

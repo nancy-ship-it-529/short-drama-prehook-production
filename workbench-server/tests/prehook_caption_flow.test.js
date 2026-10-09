@@ -14,8 +14,9 @@ for (const mode of Object.values(MODES)) {
   const prompt = buildPrompt(input, mode);
   assert(prompt.includes('吸睛画面文案（无声备选）'), `${mode.label} 缺少预生成文案规则`);
   assert(prompt.includes('不写进Seedance提示词代码块'), `${mode.label} 未隔离Seedance提示词`);
+  assert(prompt.includes('先从本次作品简介提取主角身份'), `${mode.label} 文案未绑定作品简介主线`);
 }
-assert.equal(normalizePrehookCaptions([{ text: '秘密就在门后', yellow: '秘密', red: '门后' }, { text: 'x'.repeat(29) }]).length, 1);
+assert.equal(normalizePrehookCaptions([{ text: '秘密就在门后', yellow: '秘密', red: '门后' }, { text: 'x'.repeat(36) }, { text: 'x'.repeat(37) }]).length, 2);
 
 const captions = [
   { text: '他以为门后没人，秘密却在里面', yellow: '门后', red: '秘密' },

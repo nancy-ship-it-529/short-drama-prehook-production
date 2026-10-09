@@ -134,7 +134,7 @@ const PREHOOK_CAPTION_RULES = `每个“## 方案”在全部Seedance片段和�
 - 文案1：一句文案｜黄色重点：文案中的原词｜红色反转：文案中的原词
 - 文案2：一句文案｜黄色重点：文案中的原词｜红色反转：文案中的原词
 - 文案3：一句文案｜黄色重点：文案中的原词｜红色反转：文案中的原词
-每句不超过28个汉字，一句讲清本方案真实呈现的处境、身份反差或悬念；可用剧名，但不能虚构未核实的画面、人物和结局，不照抄人物对白。强调词必须是该句连续原词；不合适时留空。文案只供后期在成片库预选和修改，默认片头显示、最晚第10秒消失，实际时码须看成片核对。它不是画外音，不配音、不压低原声、不写进Seedance提示词代码块或对白字幕时码，也不在生成AI画面时自动烧录。`;
+每句不超过36个汉字，可在画面安全区按语意分两行。先从本次作品简介提取主角身份、核心处境与关键反差，再结合本方案前贴可见画面写文案：一句有具体剧情信息且能引人追问，不能只复述眼前小动作，更不能与整部剧主线脱节。三句分别换吸睛角度，不得用“别急着划走”“真正看点还在后面”“剧情开始反转”等空泛套话；不虚构未核实的画面、人物和结局，不照抄人物对白。强调词必须是该句连续原词；不合适时留空。文案只供后期在成片库预选和修改，默认片头显示、最晚第10秒消失，实际时码须看成片核对。它不是画外音，不配音、不压低原声、不写进Seedance提示词代码块或对白字幕时码，也不在生成AI画面时自动烧录。`;
 
 function buildPrompt(input, mode) {
   if (mode.skill === 'highlight-remake') return `使用 $short-drama-prehook-production 的复刻规则完成“${mode.label}”。
@@ -602,7 +602,7 @@ function normalizePrehookCaptions(value) {
     text: String(item?.text || '').trim(),
     yellow: String(item?.yellow || '').trim(),
     red: String(item?.red || '').trim()
-  })).filter(item => item.text && item.text.length <= 28 && !/[\r\n]/.test(item.text) && (!item.yellow || item.text.includes(item.yellow)) && (!item.red || item.text.includes(item.red)));
+  })).filter(item => item.text && item.text.length <= 36 && !/[\r\n]/.test(item.text) && (!item.yellow || item.text.includes(item.yellow)) && (!item.red || item.text.includes(item.red)));
 }
 
 async function prepareSeedance(input) {
@@ -974,19 +974,22 @@ function narrationDraftState(id) {
 
 function startNarrationDraft(input) {
   const dramaTitle = String(input.dramaTitle || '').trim();
-  const summary = String(input.summary || '').trim();
   const displayOnly = input.displayOnly === true;
   const seedId = String(input.sourceSeedanceId || '').trim();
   const item = seedId ? mediaLibrary().find(entry => entry.id === seedId && !['narration', 'text_hook'].includes(entry.sourceMode)) : null;
+  const taskInput = item?.sourceTaskId && /^[a-zA-Z0-9-]+$/.test(item.sourceTaskId) ? path.join(TASKS, item.sourceTaskId, 'input.json') : '';
+  const sourceSummary = taskInput && fs.existsSync(taskInput) ? String(JSON.parse(fs.readFileSync(taskInput, 'utf8')).summary || '') : '';
+  const summary = String(input.summary || sourceSummary).trim();
   const source = item?.finalOutput || String(input.sourceVideo || '').trim();
   if (!dramaTitle && !summary) throw new Error('请先填写剧名或剧情简介');
+  if (displayOnly && !summary) throw new Error('缺少作品简介，不能只凭剧名生成可选文案；请补充真实简介后再草拟');
   if (!source || !path.isAbsolute(source) || !fs.existsSync(source)) throw new Error('请先选择可播放的本地底片，再按实际画面拟旁白');
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
   const dir = path.join(NARRATION_DRAFTS, id); fs.mkdirSync(dir, { recursive: true });
   const statusFile = path.join(dir, 'status.json'), resultFile = path.join(dir, 'result.json'), logFile = path.join(dir, 'codex.log');
   const createdAt = new Date().toISOString();
   safeWrite(statusFile, { id, state: 'running', dramaTitle, source, createdAt });
-  const prompt = `用 $short-drama-prehook-production 的${displayOnly ? '成片库吸睛画面文案' : '旁白制作'}规则，为一条已获授权的短剧底片写3句${displayOnly ? '只显示在画面上、不朗读的左下角吸睛文案' : '吸睛画外音'}候选。必须实际检查底片开头至少关键画面和声音；不能只凭简介虚构事实。\n剧名：${dramaTitle || '未提供'}\n作品简介（仅供理解，和底片不一致时以底片为准）：${summary || '未提供'}\n底片：${source}\n要求：第一句可概括剧名/主角处境，第二句抓身份反差，第三句抓一个已证实的悬念；每句不超过${displayOnly ? 28 : 30}个汉字，口语化、文明、避免剧透终局；不得照抄片中对白，不得新增片中不存在的动作、人物或危机。首个画面或对白不足以支持具体剧情时，候选只能使用已知的剧名与中性悬念，不得猜测。${displayOnly ? '每句再挑一个黄色重点词和一个红色反转词，二者都必须是该句中的连续原文片段，不重叠；不合适可以留空。此文案是画面文字，不要安排语音、TTS或原声压低。' : ''}仅输出严格 JSON：{"candidates":["句1","句2","句3"],"highlights":[{"yellow":"词","red":"词"},{"yellow":"词","red":"词"},{"yellow":"词","red":"词"}],"evidence":"实际核对到的底片开头简述","uncertainty":"尚待人工核对的地方"}。不要发起任何视频生成、上传或付费调用。`;
+  const prompt = `用 $short-drama-prehook-production 的${displayOnly ? '成片库吸睛画面文案' : '旁白制作'}规则，为一条已获授权的短剧底片写3句${displayOnly ? '只显示在画面上、不朗读的左下角吸睛文案' : '吸睛画外音'}候选。必须核对简介的核心剧情与底片前10秒的关键画面、声音；文案要把当前钩子连到整部剧的主角身份、处境或冲突，不得只讲与主线无关的小动作。\n剧名：${dramaTitle || '未提供'}\n作品简介：${summary || '未提供；缺少剧情依据时不要编造，只给待补简介提示'}\n底片：${source}\n要求：三句从不同角度写具体的身份反差、危机或悬念，能让观众追问下一幕；每句不超过${displayOnly ? 36 : 30}个汉字，画面文案可按语意排两行，口语化、文明，不剧透终局。每句至少对应简介中的一个明确剧情点，同时不与已核对的前10秒画面冲突；不得照抄台词，不得新增不存在的人物、动作或危机。禁用“别急着划走”“真正看点还在后面”“剧情开始反转”等空泛套话。简介缺失或与画面矛盾时，写清不确定处，不要伪装为已核实剧情。${displayOnly ? '每句再挑一个黄色重点词和一个红色反转词，二者都必须是该句中的连续原文片段，不重叠；不合适可以留空。此文案是画面文字，不要安排语音、TTS或原声压低。' : ''}仅输出严格 JSON：{"candidates":["句1","句2","句3"],"highlights":[{"yellow":"词","red":"词"},{"yellow":"词","red":"词"},{"yellow":"词","red":"词"}],"evidence":"简介剧情点与核对到的底片画面","uncertainty":"尚待人工核对的地方"}。不要发起任何视频生成、上传或付费调用。`;
   const child = spawn(CODEX, ['exec', '-', '-C', WORKSPACE, '--sandbox', 'workspace-write', '--output-last-message', resultFile, '--color', 'never'], { cwd: WORKSPACE, windowsHide: true, stdio: ['pipe', 'pipe', 'pipe'] });
   const log = fs.createWriteStream(logFile, { flags: 'a' }); child.stdout.pipe(log); child.stderr.pipe(log); child.stdin.end(prompt, 'utf8');
   child.on('error', error => safeWrite(statusFile, { ...narrationDraftState(id), state: 'failed', error: error.message, finishedAt: new Date().toISOString() }));
@@ -996,7 +999,7 @@ function startNarrationDraft(input) {
       if (code !== 0 || !fs.existsSync(resultFile)) throw new Error('Codex 未产出有效旁白候选');
       const raw = fs.readFileSync(resultFile, 'utf8').trim().replace(/^```(?:json)?\s*|\s*```$/g, '');
       const result = JSON.parse(raw);
-      if (!Array.isArray(result.candidates) || result.candidates.length !== 3 || result.candidates.some(value => typeof value !== 'string' || !value.trim() || value.length > (displayOnly ? 28 : 70))) throw new Error('画面文案候选格式或长度无效');
+      if (!Array.isArray(result.candidates) || result.candidates.length !== 3 || result.candidates.some(value => typeof value !== 'string' || !value.trim() || value.length > (displayOnly ? 36 : 70))) throw new Error('画面文案候选格式或长度无效');
       const highlights = Array.isArray(result.highlights) ? result.highlights.slice(0, 3).map((item, index) => ({ yellow: result.candidates[index].includes(String(item?.yellow || '')) ? String(item?.yellow || '') : '', red: result.candidates[index].includes(String(item?.red || '')) ? String(item?.red || '') : '' })) : [];
       safeWrite(statusFile, { ...narrationDraftState(id), state: 'completed', candidates: result.candidates, highlights, evidence: String(result.evidence || ''), uncertainty: String(result.uncertainty || ''), finishedAt: new Date().toISOString() });
     } catch (error) { safeWrite(statusFile, { ...narrationDraftState(id), state: 'failed', error: error.message, finishedAt: new Date().toISOString() }); }
@@ -1020,7 +1023,7 @@ function startNarrationOverlay(input) {
   if (displayOnly && narration.startsWith('“') && narration.endsWith('”')) narration = narration.slice(1, -1).trim();
   if (!narration || narration.length > 120) throw new Error('请填写不超过120字的旁白文案');
   if (displayOnly && !libraryMode) throw new Error('画面文案请从成片库选择已完成视频');
-  if (libraryMode && (narration.length > (displayOnly ? 28 : 70) || /[\r\n]/.test(narration) || (narration.match(/[。！？!?]/g) || []).length > 1)) throw new Error(displayOnly ? '成片库画面文案请保持一句话、28字以内' : '成片库配音旁白请保持一句话、70字以内');
+  if (libraryMode && (narration.length > (displayOnly ? 36 : 70) || /[\r\n]/.test(narration) || (narration.match(/[。！？!?]/g) || []).length > 1)) throw new Error(displayOnly ? '成片库画面文案请保持一句话、36字以内；画面会按语意自动分两行' : '成片库配音旁白请保持一句话、70字以内');
   const startSeconds = Number(input.startSeconds);
   if (!Number.isFinite(startSeconds) || startSeconds < 0) throw new Error('旁白起声秒数无效');
   const maxEndSeconds = libraryMode ? Number(input.maxEndSeconds) : null;
@@ -1184,7 +1187,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.6.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.7.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1298,7 +1301,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.6.0' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.7.0' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {

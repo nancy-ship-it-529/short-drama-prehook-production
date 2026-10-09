@@ -46,7 +46,7 @@
 </head>
 <body>
   <main class="shell">
-    <header class="top"><div><h1>二创前贴工作台 <small style="font-size:14px;color:#aebbd7">3.6.0</small></h1><p>本地服务 · 本地 Skill · Codex 自动执行</p></div><div id="health" class="health">正在检查 Codex…</div></header>
+    <header class="top"><div><h1>二创前贴工作台 <small style="font-size:14px;color:#aebbd7">3.7.0</small></h1><p>本地服务 · 本地 Skill · Codex 自动执行</p></div><div id="health" class="health">正在检查 Codex…</div></header>
     <nav class="page-tabs" aria-label="页面导航"><button class="page-tab active" data-page="workbench">制作台</button><button class="page-tab" data-page="tasks">任务栏</button><button class="page-tab" data-page="library">成片库（含画面文案）</button></nav>
     <div id="page-workbench" class="page-view"><section class="modes" aria-label="默认四路并行">
       <div class="mode active" data-mode="short"><strong>单爆点紧凑告知</strong><span>异常画面 → 一句告密 → 立即反应 → 原片验证</span></div>
@@ -90,8 +90,8 @@
     <p class="muted">只在画面左下角加无声吸睛文字。保留原片对白内容；变速版会同步加快画面和声音、尽量保持音高。黑描边白字，重点词可设黄色和红色；红框不进入成片。</p>
     <video id="libraryNarrationSourcePreview" controls playsinline preload="metadata" style="display:block;width:min(100%,320px);max-height:360px;border-radius:9px;background:#000"></video>
     <div id="libraryNarrationCandidates" class="status">打开后直接显示可选画面文案。</div>
-    <button id="refreshLibraryNarrationCandidates" class="view-case" type="button">按片头重新草拟 3 句</button>
-    <label>单选文案可在这里修改（正文最多28字，多选时使用列表原文）<textarea id="libraryNarrationText" maxlength="30" style="min-height:80px" placeholder="先从上方勾选画面文案"></textarea></label>
+    <button id="refreshLibraryNarrationCandidates" class="view-case" type="button">按简介和片头重写 3 句</button>
+    <label>单选文案可在这里修改（正文最多36字，成片自动分两行；多选时使用列表原文）<textarea id="libraryNarrationText" maxlength="38" style="min-height:80px" placeholder="先从上方勾选画面文案"></textarea></label>
     <div class="two"><label>黄色重点词（可留空）<input id="libraryNarrationYellow" placeholder="必须是文案中的原词"></label><label>红色反转词（可留空）<input id="libraryNarrationRed" placeholder="必须是文案中的原词"></label></div>
     <div class="two"><label>底片第几秒开始显示<input id="libraryNarrationStart" type="number" min="0" max="9" step="0.1" value="0"></label><label>底片第几秒消失（不超过10秒，变速版自动换算）<input id="libraryNarrationEnd" type="number" min="0.5" max="10" step="0.1" value="10"></label></div>
     <button id="createLibraryNarration" class="run" type="button">生成已选文案视频（每句一条）</button><div id="libraryNarrationStatus" class="status">勾选后每句产出一条，候选依次使用 1.0、1.1、1.2 倍速；保留完整底片和原声同步，不随机裁台词。轻微变速不保证平台判定为不同素材。</div>
@@ -153,7 +153,7 @@
       }
       return map;
     }
-    function extractPrehookCaptions(lines){return lines.map(line=>line.match(/^\s*-\s*文案[123][：:]\s*(.+?)\s*｜\s*黄色重点[：:]\s*(.*?)\s*｜\s*红色反转[：:]\s*(.*?)\s*$/)).filter(Boolean).map(match=>({text:match[1].trim(),yellow:match[2].trim(),red:match[3].trim()})).filter(item=>item.text&&item.text.length<=28&&(!item.yellow||item.text.includes(item.yellow))&&(!item.red||item.text.includes(item.red))).slice(0,3)}
+    function extractPrehookCaptions(lines){return lines.map(line=>line.match(/^\s*-\s*文案[123][：:]\s*(.+?)\s*｜\s*黄色重点[：:]\s*(.*?)\s*｜\s*红色反转[：:]\s*(.*?)\s*$/)).filter(Boolean).map(match=>({text:match[1].trim(),yellow:match[2].trim(),red:match[3].trim()})).filter(item=>item.text&&item.text.length<=36&&(!item.yellow||item.text.includes(item.yellow))&&(!item.red||item.text.includes(item.red))).slice(0,3)}
     function renderPromptBlocks(lines,imageMap,captions=[]){
       let html='',pending=[];
       for(let i=0;i<lines.length;i++){
@@ -270,10 +270,10 @@
     document.getElementById('refreshLibrary').addEventListener('click',loadLibraryGrouped);
     const libraryNarrationModal=document.getElementById('libraryNarrationModal');let libraryNarrationItem=null,libraryNarrationToken=0;
     document.getElementById('closeLibraryNarration').addEventListener('click',()=>{libraryNarrationModal.hidden=true;libraryNarrationToken++;const preview=document.getElementById('libraryNarrationSourcePreview');preview.pause();preview.removeAttribute('src');preview.load()});
-    function immediateLibraryCaptions(item){const title=String(item?.dramaTitle||'这部剧').trim().replace(/[《》“”]/g,'').slice(0,10);return [{text:`《${title}》这一幕，别急着划走`},{text:`《${title}》真正的看点还在后面`},{text:`《${title}》这一秒，剧情开始反转`}].filter(value=>value.text.length<=28)}
+    function immediateLibraryCaptions(){return []}
     function renderLibraryCaptions(captions,source,note=''){
       const box=document.getElementById('libraryNarrationCandidates');
-      box.innerHTML=`<strong>${escapeHtml(source)}（可勾选多句，每句一条视频）</strong>`+captions.map((value,index)=>{const text=String(value.text||'').replace(/^“|”$/g,'');return `<label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" class="library-narration-select" data-index="${index}" style="width:auto;flex:none"><button type="button" class="view-case library-narration-candidate" data-text="${encodeURIComponent(text)}" data-yellow="${encodeURIComponent(value.yellow||'')}" data-red="${encodeURIComponent(value.red||'')}" style="flex:1;text-align:left">${index+1}. “${escapeHtml(text)}” <span class="muted">· ${[1,1.1,1.2][index%3].toFixed(1)}倍</span></button></label>`}).join('')+`<p class="muted">${escapeHtml(note||'请核对画面与文案是否相符；只加无声文字，不遮盖原字幕。')}</p>`;
+      box.innerHTML=`<strong>${escapeHtml(source)}（可勾选多句，每句一条视频）</strong>`+captions.map((value,index)=>{const text=String(value.text||'').replace(/^“|”$/g,'');return `<label style="display:flex;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" class="library-narration-select" data-index="${index}" style="width:auto;flex:none"><button type="button" class="view-case library-narration-candidate" data-text="${encodeURIComponent(text)}" data-yellow="${encodeURIComponent(value.yellow||'')}" data-red="${encodeURIComponent(value.red||'')}" style="flex:1;text-align:left;white-space:normal;word-break:break-word">${index+1}. “${escapeHtml(text)}” <span class="muted">· ${[1,1.1,1.2][index%3].toFixed(1)}倍</span></button></label>`}).join('')+`<p class="muted">${escapeHtml(note||'请核对简介、画面与文案是否相符；只加无声文字，不遮盖原字幕。')}</p>`;
     }
     function showPreparedLibraryCaptions(item){const captions=Array.isArray(item?.prehookCaptions)?item.prehookCaptions:[];if(!captions.length)return false;renderLibraryCaptions(captions,item.captionSource==='cached_draft'?'此前按片头草拟的文案':'脚本阶段预生成的文案');return true}
     async function draftLibraryNarration(){
@@ -291,7 +291,7 @@
       const end=Number(libraryNarrationItem.suggestedNarrationEnd);
       document.getElementById('libraryNarrationEnd').value=end>=5&&end<=10?String(end):'10';
       document.getElementById('libraryNarrationStatus').textContent=end>=5&&end<=10?`按已有字幕估计原台词在 ${end.toFixed(1)} 秒收尾；请按所选倍速核对消失时间。原声对白会同步变速。`:'建议让文字在原台词收尾时消失；请按所选倍速预览核对位置。原声对白会同步变速。';
-      libraryNarrationModal.hidden=false;if(!showPreparedLibraryCaptions(libraryNarrationItem))renderLibraryCaptions(immediateLibraryCaptions(libraryNarrationItem),'即时基础文案','基础文案只依据剧名，不代表已核对剧情。需要贴合片头，请点击“按片头重新草拟”。');
+      libraryNarrationModal.hidden=false;if(!showPreparedLibraryCaptions(libraryNarrationItem)){renderLibraryCaptions(immediateLibraryCaptions(),'等待剧情核对','没有可直接选用的文案，正在按简介和片头草拟；不会使用只凭剧名的套话。');draftLibraryNarration()}
     });
     document.getElementById('refreshLibraryNarrationCandidates').addEventListener('click',draftLibraryNarration);
     document.getElementById('libraryNarrationCandidates').addEventListener('click',event=>{const button=event.target.closest('.library-narration-candidate');if(!button)return;const checkbox=button.closest('label')?.querySelector('.library-narration-select');if(checkbox)checkbox.checked=true;document.getElementById('libraryNarrationText').value=`“${decodeURIComponent(button.dataset.text)}”`;document.getElementById('libraryNarrationYellow').value=decodeURIComponent(button.dataset.yellow||'');document.getElementById('libraryNarrationRed').value=decodeURIComponent(button.dataset.red||'');document.querySelectorAll('.library-narration-candidate').forEach(candidate=>candidate.style.borderColor=candidate===button?'#8bdba9':'')});

@@ -1,6 +1,6 @@
 {
   "name": "short-drama-prehook-workbench",
-  "version": "3.6.0",
+  "version": "3.7.0",
   "private": true,
   "description": "Local four-lane prehook workbench; recipient-owned credentials required",
   "scripts": {

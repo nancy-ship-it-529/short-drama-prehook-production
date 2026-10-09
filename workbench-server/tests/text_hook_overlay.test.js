@@ -42,10 +42,12 @@ try {
   assert(ass.includes('王府秘密') && ass.includes('真相'), '强调词不能被拆行');
   assert(ass.includes('0:00:08.50'), '文案应在8.5秒消失');
   const fastDir = path.join(testDir, 'fast-out');
-  fs.writeFileSync(request, JSON.stringify({ source_video: source, output_dir: fastDir, narration: '“女子发现王府秘密，真相竟在眼前”', accent_yellow: '王府秘密', accent_red: '真相', start_seconds: 0, max_end_seconds: 8.5, speed_factor: 1.1 }));
+  const twoLineText = '一头普通棕熊刚救下野兔，就发现御熊宗把妖兽当作棋子，点化同族才有活路';
+  fs.writeFileSync(request, JSON.stringify({ source_video: source, output_dir: fastDir, narration: `“${twoLineText}”`, accent_yellow: '御熊宗', accent_red: '棋子', start_seconds: 0, max_end_seconds: 8.5, speed_factor: 1.1 }));
   run(python, [script, '--request-file', request]);
   const fast = JSON.parse(fs.readFileSync(path.join(fastDir, 'manifest.json'), 'utf8'));
-  assert.equal(fast.narration, '女子发现王府秘密，真相竟在眼前');
+  assert.equal(fast.narration, twoLineText);
+  assert(fs.readFileSync(path.join(fastDir, 'hook_text.ass'), 'utf8').includes('\\N'), '较长文案须排为两行');
   assert.equal(fast.audio_mode, 'atempo');
   assert.equal(fast.speed_factor, 1.1);
   assert(Math.abs(fast.duration - 12 / 1.1) < 0.3, '倍速版本须压缩完整底片而非随意截断');
