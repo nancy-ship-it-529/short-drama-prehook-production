@@ -5,6 +5,7 @@ const os = require('os');
 const { spawn, spawnSync } = require('child_process');
 const crypto = require('crypto');
 const runtime = require('./runtime-config');
+const { validateCase, validateGenerationPrompt } = require(path.join(__dirname, 'case-qa'));
 
 const HOST = '127.0.0.1';
 const PORT = runtime.port;
@@ -157,11 +158,13 @@ ${UNIFIED_PRODUCTION_RULES}
 先输出“原高光逐秒还原表”，再输出可直接送入Seedance的重生成提示词。人物参考图必须从开头片段实际截图，但只用于内部核验并明确标为“内部核验图”；环境不编号。默认Seedance提示词不得使用@图片引用，也不得上传原片真人脸，必须把人物改写为虚构成年角色的年龄、发型、脸型、服装和体态文字描述。AI只重生成00:00.000至00:${String(Number(input.remakeCutSeconds || 15)).padStart(2, '0')}.000；成片时用AI片段完整替换原片同一区间，然后从完整原片00:${String(Number(input.remakeCutSeconds || 15)).padStart(2, '0')}.000开始直接接回，绝不重做后续剧情。必须写出一行“接回原片：00:${String(Number(input.remakeCutSeconds || 15)).padStart(2, '0')}.000”。
 
 为了让工作台可以一键带入Seedance，Markdown格式必须严格遵守：
+0. 按要求输出恰好${input.count}条“## 方案一/二/三”方案；每个方案正文第一行必须是“钩子：一句来自已核实原片开头的视觉冲突”，不同方案的镜头钩子不得完全重复。
 1. 每张人物截图单独一行，写“内部核验图1”和已验证存在的绝对路径，路径必须放在单个反引号内；例如：内部核验图1｜林明远｜人物与服装核验｜原片00:02.4｜\`C:\\绝对路径\\林明远.jpg\`。不得把内部核验图写成正式Seedance的@图片素材。
 2. 每个可独立生成的片段必须使用三级标题“### Seedance提示词（片段1）”，标题下只放该片段可以直接复制使用的完整提示词；提示词不得包含任何@图片引用，角色外观全部用文字描述。
-3. 每段提示词后补充“生成参数建议”：时长4至15秒、9:16、720p、是否生成对白音频；参数不要混入提示词代码块。
+3. 每段提示词后使用固定格式“生成参数建议：X秒｜9:16｜720p｜生成对白和环境音｜无水印”，X为4至15的整数；参数不要混入提示词代码块。
 4. 内部核验图必须截取并保存到当前任务目录或工作区可访问目录，不能只给时间码、不能写待生成路径、不能用环境图充当人物图；它们不进入正式生成请求。
 5. 对白必须写进Seedance提示词，包含说话人、原句、情绪、语速与停顿；禁止只在提示词外另列对白。
+5a. 每句对白还须在同一提示词代码块内逐句列出“字幕时码：00:02.000 --> 00:05.500｜说话人｜准确对白”；这些仅为生成目标，不是最终字幕时码，变速后须按实声重对齐。
  6. 最终Seedance提示词只使用正向、文明、可生成的描述；不要为了表达“禁止”而在提示词中重复任何低俗、危险或平台敏感词，统一改写为“画面整洁、自然、适合公开展示，不新增无关元素”。
 
 ${PREHOOK_CAPTION_RULES}
@@ -340,7 +343,9 @@ function startTask(input, batchId = null) {
   const logFile = path.join(dir, 'codex.log');
   const promptFile = path.join(dir, 'prompt.txt');
   const effectiveInput = prepareRemakeInput(input, dir);
-  const prompt = buildPrompt(effectiveInput, mode);
+  const prompt = `${buildPrompt(effectiveInput, mode)}
+
+交付前逐条自查方案数量、对白时码、原片边界和三句画面文案；把全部方案正文直接写入最终回复供工作台保存为 result.md。缺可读原片时明确标脚本草案，不得伪造核片或付费准备。`;
   fs.writeFileSync(path.join(dir, 'input.json'), JSON.stringify(effectiveInput, null, 2), 'utf8');
   fs.writeFileSync(promptFile, prompt, 'utf8');
   const createdAt = new Date().toISOString();
@@ -360,8 +365,10 @@ function startTask(input, batchId = null) {
   child.on('close', code => {
     log.end();
     const result = fs.existsSync(resultFile) ? fs.readFileSync(resultFile, 'utf8') : '';
-    const state = code === 0 && result.trim() ? 'completed' : 'failed';
-    safeWrite(statusFile, { id, batchId, state, mode: input.mode, label: mode.label, createdAt, exitCode: code, finishedAt: new Date().toISOString(), error: state === 'failed' ? 'Codex执行失败，请查看日志或登录状态。' : undefined });
+    const qa = validateCase(result, effectiveInput);
+    fs.writeFileSync(path.join(dir, '规则检查.json'), JSON.stringify(qa, null, 2), 'utf8');
+    const state = code === 0 && result.trim() && qa.ok ? 'completed' : 'failed';
+    safeWrite(statusFile, { id, batchId, state, mode: input.mode, label: mode.label, createdAt, exitCode: code, finishedAt: new Date().toISOString(), qaPassed: qa.ok, qaErrors: qa.errors, qaWarnings: qa.warnings, stage: qa.ok ? (qa.warnings.length ? '脚本草案（未核片）' : '脚本规则检查通过') : '脚本规则检查未通过', error: state === 'failed' ? (qa.errors.length ? `规则检查未通过：${qa.errors.slice(0, 5).join('；')}` : 'Codex执行失败，请查看日志或登录状态。') : undefined });
   });
   return { id, state: 'running', label: mode.label };
 }
@@ -598,9 +605,26 @@ function normalizePrehookCaptions(value) {
 }
 
 async function prepareSeedance(input) {
-  const postDialogue = extractExactDialogue(input.prompt);
+  const sourceTaskId = String(input.sourceTaskId || '').trim();
   const sourceMode = String(input.sourceMode || '').trim();
-  const splice = extractSpliceTarget(input.prompt, String(input.sourceTaskId || '').trim(), sourceMode);
+  if (sourceTaskId) {
+    if (!/^[a-zA-Z0-9-]+$/.test(sourceTaskId)) throw new Error('来源任务ID无效');
+    const sourceInputFile = path.join(TASKS, sourceTaskId, 'input.json');
+    if (!fs.existsSync(sourceInputFile)) throw new Error('来源任务不存在，不能核对原片');
+    const sourceInput = JSON.parse(fs.readFileSync(sourceInputFile, 'utf8'));
+    if (sourceMode && sourceInput.mode !== sourceMode) throw new Error('生成模式与来源任务不一致，请从对应案例重新打开');
+    if (input.ratio !== '9:16' || input.resolution !== '720p' || input.generateAudio !== true || input.watermark === true) throw new Error('当前前贴只能按9:16、720p、Seedance同期原声、无水印准备');
+    if (sourceInput.mode === 'remake') {
+      const declared = String(input.prompt || '').match(/接回原片[：:]\s*00:(\d{2})\.(\d{3})/);
+      const expected = Number(sourceInput.remakeCutSeconds || 15);
+      if (!declared || Math.abs(Number(declared[1]) + Number(declared[2]) / 1000 - expected) > 0.001) throw new Error(`复刻接回时码必须与已核定替换区间一致：00:${String(expected).padStart(2, '0')}.000`);
+    }
+    const promptErrors = validateGenerationPrompt(input.prompt, Number(input.duration), sourceInput.mode);
+    if (promptErrors.length) throw new Error(`付费前规则检查未通过：${promptErrors.join('；')}`);
+  }
+  const postDialogue = extractExactDialogue(input.prompt);
+  const splice = extractSpliceTarget(input.prompt, sourceTaskId, sourceMode);
+  if (sourceTaskId && !splice.video) throw new Error('来源原片尚未核验，不能创建付费确认单');
   const request = normalizeSeedanceRequest(input);
   const id = `${new Date().toISOString().replace(/[:.]/g, '-')}-${crypto.randomBytes(3).toString('hex')}`;
   const tempDir = path.join(SEEDANCE_TEMP, id); fs.mkdirSync(tempDir, { recursive: true });
@@ -1148,7 +1172,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.4.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.4.1', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1262,7 +1286,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.4.0' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.4.1' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {

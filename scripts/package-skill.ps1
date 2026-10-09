@@ -28,7 +28,7 @@ try {
   # Package release source by allowlist, never recursively copy runtime/job directories.
   $appRoot = Join-Path $skillDir 'workbench-server'
   if (Test-Path -LiteralPath $appRoot) {
-    $sourceFiles = @('server.js','runtime-config.js','start-workbench.ps1','stop-workbench.ps1','setup-workbench.ps1','requirements.txt','package.json','credentials.example.env','public\index.html')
+    $sourceFiles = @('server.js','case-qa.js','runtime-config.js','start-workbench.ps1','stop-workbench.ps1','setup-workbench.ps1','requirements.txt','package.json','credentials.example.env','public\index.html')
     foreach ($sourceDir in @('scripts','connectors','tests')) {
       foreach ($entry in (Get-ChildItem -LiteralPath (Join-Path $appRoot $sourceDir) -Recurse -File)) {
         $relative = $entry.FullName.Substring($appRoot.Length + 1)
