@@ -1183,7 +1183,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.5.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.5.1', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1297,7 +1297,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.5.0' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.5.1' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {
