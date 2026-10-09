@@ -25,7 +25,7 @@ git clone https://github.com/nancy-ship-it-529/short-drama-prehook-production.gi
 & .\workbench-server\start-workbench.ps1
 ```
 
-浏览器打开 `http://127.0.0.1:3217/#workbench`。界面版本应为 **3.4.1**，含单爆点、递进、复刻、猎奇四路、脚本及付费前规则检查，以及任务栏和按剧名分类的成片库。若旧程序占用端口，运行 `start-workbench.ps1 -Port 3218`，不要继续使用旧页面。
+浏览器打开 `http://127.0.0.1:3217/#workbench`。界面版本应为 **3.4.2**，含单爆点、递进、复刻、猎奇四路、脚本及付费前规则检查，以及任务栏和按剧名分类的成片库；后期失败会直接显示简短原因。若旧程序占用端口，运行 `start-workbench.ps1 -Port 3218`，不要继续使用旧页面。
 
 ### 自己的配置
 

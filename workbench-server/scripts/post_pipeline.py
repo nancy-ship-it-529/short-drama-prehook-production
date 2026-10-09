@@ -115,6 +115,18 @@ def write_srt(text: str, total: float, target: Path, speed: float = 1.0) -> None
     target.write_text("\n".join(chunks), encoding="utf-8-sig")
 
 
+def scaled_subtitle_spec(text: str, speed: float) -> str:
+    """OCR must inspect the accelerated video at accelerated cue times."""
+    lines = []
+    for line in text.splitlines():
+        match = re.match(r"^\[(\d+(?:\.\d+)?)-(\d+(?:\.\d+)?)\](.+)$", line.strip())
+        if match:
+            lines.append(f"[{float(match.group(1)) / speed:.3f}-{float(match.group(2)) / speed:.3f}]{match.group(3)}")
+        else:
+            lines.append(line)
+    return "\n".join(lines)
+
+
 async def synthesize(text: str, voice: str, output: Path) -> None:
     await edge_tts.Communicate(text=text, voice=voice).save(str(output))
 
@@ -170,7 +182,7 @@ def main() -> None:
         if not OCR_PYTHON.is_file() or not SUBTITLE_REPAIR.is_file():
             raise FileNotFoundError("本地中文OCR单字修补组件未安装")
         subtitle_spec = work / "subtitle-cues.txt"
-        subtitle_spec.write_text(subtitle_text, encoding="utf-8")
+        subtitle_spec.write_text(scaled_subtitle_spec(subtitle_text, speed_factor), encoding="utf-8")
         report_file = work / "subtitle-repair-report.json"
         run([str(OCR_PYTHON), str(SUBTITLE_REPAIR), "--video", str(encoded_output), "--subtitle-text-file", str(subtitle_spec), "--output", str(output), "--report", str(report_file)])
         ocr_report = json.loads(report_file.read_text(encoding="utf-8"))

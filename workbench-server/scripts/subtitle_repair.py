@@ -46,6 +46,8 @@ def parse_cues(text: str) -> list[dict]:
 
 
 def read_image(path: Path):
+    if not path.is_file():
+        return None
     return cv2.imdecode(np.fromfile(str(path), dtype=np.uint8), cv2.IMREAD_COLOR)
 
 
@@ -212,6 +214,7 @@ def main() -> None:
         raise ValueError("缺少正确对白，无法执行字幕检查")
     engine = RapidOCR()
     repairs, checks, missing_captions = [], [], []
+    total = video_duration(video)
     with tempfile.TemporaryDirectory(prefix="subtitle-ocr-") as temp_dir:
         temp = Path(temp_dir)
         if untimed:
@@ -223,10 +226,12 @@ def main() -> None:
             row = cue.pop("detectedRow", None)
             if row is None:
                 midpoint = cue["start"] + (cue["end"] - cue["start"]) * 0.55
-                run([str(FFMPEG), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{midpoint:.3f}", "-i", str(video), "-frames:v", "1", "-update", "1", str(frame)])
-                row = choose_row(ocr_rows(engine, frame), cue["text"])
+                if cue["start"] < total and total > 0.1:
+                    midpoint = min(midpoint, total - 0.1)
+                    run([str(FFMPEG), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{midpoint:.3f}", "-i", str(video), "-frames:v", "1", "-update", "1", str(frame)])
+                    row = choose_row(ocr_rows(engine, frame), cue["text"])
             if row is None:
-                checks.append({**cue, "state": "needs_review", "ocr": "", "error": "未检测到Seedance原字幕，未自动叠加整句"})
+                checks.append({**cue, "state": "needs_review", "ocr": "", "error": "取帧越界或未检测到Seedance原字幕，转入音频对齐字幕重建"})
                 continue
             ratio = difflib.SequenceMatcher(None, row["text"], re.sub(r"\s+", "", cue["text"])).ratio()
             try:

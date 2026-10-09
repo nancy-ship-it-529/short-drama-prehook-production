@@ -918,6 +918,17 @@ function cachedCaptionDrafts() {
   return bySource;
 }
 
+function summarizePostFailure(raw) {
+  const error = String(raw || '').trim();
+  if (!error) return '';
+  if (/FileNotFoundError:.*cue-\d+\.png/s.test(error)) return '后期字幕OCR取帧失败，可能是变速后时码越界；可复用原视频免费修后期。';
+  if (/原片高光文件不存在|视频不存在/.test(error)) return '后期所需本地视频缺失；请核对原片路径与缓存，不能重新付费生成替代。';
+  if (/不是可安全自动修补的单字差异/.test(error)) return '字幕与原片差异超出安全单字修补范围，需按实际声音复核。';
+  const lines = error.split(/\r?\n/).map(line => line.trim()).filter(line => line && !/^(Traceback|File "|\^+|frame=|During handling)/.test(line));
+  const cause = lines.filter(line => /(?:Error|Exception|错误|失败|不存在|超出|无法|拒绝)/.test(line)).at(-1);
+  return cause && !/^(RuntimeError|ValueError|FileNotFoundError)$/.test(cause) ? cause.slice(0, 180) : '后期执行中断，需查看完整日志及阶段文件定位原因。';
+}
+
 function mediaLibrary() {
   const items = [];
   const cachedCaptions = cachedCaptionDrafts();
@@ -938,7 +949,7 @@ function mediaLibrary() {
       dramaTitle: inferredDramaTitle, sourceTaskId: state.sourceTaskId || '', sourceMode: inferredMode, spliceVideo: state.spliceVideo || '', spliceStart: Number(state.spliceStart || 0), spliceAudioStart: Number(post?.splice?.audio_start ?? state.spliceAudioStart ?? state.spliceStart ?? 0), spliceCorrectionReason: state.spliceCorrectionReason || '', splicePolicyWarning: ['short', 'long', 'curious'].includes(rawMode) && Number(state.spliceStart || 0) !== 0 ? '历史成片裁剪了高光原片开头，不符合当前非复刻前贴规则；需重写前贴后复核。' : '',
       title: prompt.replace(/\s+/g, ' ').slice(0, 55) || 'Seedance视频', model: state.generationPayload?.model || '', duration: state.generationPayload?.duration || '', resolution: state.generationPayload?.resolution || '', cost: state.totalCost || '',
       finalOutput, finalVideoUrl: finalOutput ? `/api/local-video?path=${encodeURIComponent(finalOutput)}&v=${Math.trunc(fs.statSync(finalOutput).mtimeMs)}` : '', subtitle: post?.subtitle || '', suggestedNarrationEnd: subtitleEndNearTen(post?.subtitle), spliceReviewUrl: post?.splice?.review_clip && fs.existsSync(post.splice.review_clip) ? `/api/local-video?path=${encodeURIComponent(post.splice.review_clip)}` : '', rawVideoUrl: cachedRaw ? `/api/local-video?path=${encodeURIComponent(cachedRaw)}&v=${Math.trunc(fs.statSync(cachedRaw).mtimeMs)}` : (state.videoUrl || ''), cachedRaw,
-      error: post?.error || state.error || state.cacheError || '', cancellationNote: state.cancellationNote || '', taskId: state.taskId || '', prompt, dialogue: state.postDialogue || '', prehookCaptions: scriptedCaptions.length ? scriptedCaptions : fallbackCaptions, captionSource: scriptedCaptions.length ? 'script' : fallbackCaptions.length ? 'cached_draft' : '', cancelledAt: state.cancelledAt || '', ocrReport: post?.correctedOcrReport || post?.ocrReport || null
+      error: post?.error || state.error || state.cacheError || '', errorSummary: summarizePostFailure(post?.error || state.error || state.cacheError || ''), cancellationNote: state.cancellationNote || '', taskId: state.taskId || '', prompt, dialogue: state.postDialogue || '', prehookCaptions: scriptedCaptions.length ? scriptedCaptions : fallbackCaptions, captionSource: scriptedCaptions.length ? 'script' : fallbackCaptions.length ? 'cached_draft' : '', cancelledAt: state.cancelledAt || '', ocrReport: post?.correctedOcrReport || post?.ocrReport || null
     });
   }
   for (const entry of fs.readdirSync(NARRATION_JOBS, { withFileTypes: true }).filter(item => item.isDirectory())) {
@@ -1172,7 +1183,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.4.1', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.4.2', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1286,7 +1297,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.4.1' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.4.2' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {
