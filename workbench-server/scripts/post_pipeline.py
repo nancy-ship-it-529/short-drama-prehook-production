@@ -48,13 +48,14 @@ def acquire(source: str, destination: Path) -> Path:
     return path
 
 
-def normalize(source: Path, destination: Path, start: float = 0.0, speed: float = 1.0) -> None:
+def normalize(source: Path, destination: Path, start: float = 0.0, speed: float = 1.0, ratio: str = "9:16") -> None:
     common = [str(FFMPEG), "-hide_banner", "-y"]
     if start > 0:
         common += ["-ss", f"{start:.3f}"]
     common += ["-i", str(source)]
     speed = speed if speed in (1.0, 1.2, 1.5) else 1.0
-    video = "scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2:black,fps=30,format=yuv420p"
+    width, height = {"9:16": (720, 1280), "16:9": (1280, 720), "1:1": (720, 720)}.get(ratio, (720, 1280))
+    video = f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black,fps=30,format=yuv420p"
     if speed != 1.0:
         video += f",setpts=PTS/{speed:.1f}"
     if has_audio(source):
@@ -153,7 +154,10 @@ def main() -> None:
     speed_factor = float(request.get("speed_factor", 1.2) or 1.2)
     if speed_factor not in (1.2, 1.5):
         speed_factor = 1.2
-    ai_norm = work / "01-ai.mp4"; normalize(ai, ai_norm, speed=speed_factor)
+    ratio = request.get("ratio", "9:16")
+    if ratio not in ("9:16", "16:9", "1:1"):
+        raise ValueError(f"不支持的画幅：{ratio}")
+    ai_norm = work / "01-ai.mp4"; normalize(ai, ai_norm, speed=speed_factor, ratio=ratio)
     base = ai_norm
     narration = request.get("narration", "").strip(); subtitle_text = request.get("subtitle_text", "").strip() or narration; voice = request.get("voice", "zh-CN-XiaoxiaoNeural")
     tts = work / "narration.mp3"; srt = work / "subtitles.srt"
@@ -199,14 +203,14 @@ def main() -> None:
         if highlight_start >= highlight_duration - 0.5:
             raise ValueError(f"原片切入点 {highlight_start:.3f} 秒超出有效画面，原片时长 {highlight_duration:.3f} 秒")
         ai_end = duration(output)
-        highlight_norm = work / "02-highlight.mp4"; normalize(highlight, highlight_norm, highlight_start)
+        highlight_norm = work / "02-highlight.mp4"; normalize(highlight, highlight_norm, highlight_start, ratio=ratio)
         concat_list = work / "concat.txt"; concat_list.write_text("\n".join(f"file '{item.as_posix()}'" for item in [output, highlight_norm]), encoding="utf-8")
         joined = work / "joined.mp4"
         run([str(FFMPEG), "-hide_banner", "-y", "-f", "concat", "-safe", "0", "-i", str(concat_list), "-c", "copy", "-movflags", "+faststart", str(joined)])
         shutil.copy2(joined, output)
         review_clip = work / "splice-review.mp4"
         run([str(FFMPEG), "-hide_banner", "-loglevel", "error", "-y", "-ss", f"{max(0.0, ai_end - 0.9):.3f}", "-i", str(output), "-t", "2.6", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(review_clip)])
-    manifest = {"status": "succeeded", "output": str(output), "duration": duration(output), "speed_factor": speed_factor, "narration_audio": str(tts) if narration else None, "subtitle": str(srt) if srt.exists() else None, "ocr_report": ocr_report, "splice": {"video": str(highlight), "start": highlight_start, "ai_end": ai_end, "review_clip": str(review_clip)} if highlight else None}
+    manifest = {"status": "succeeded", "output": str(output), "duration": duration(output), "ratio": ratio, "speed_factor": speed_factor, "narration_audio": str(tts) if narration else None, "subtitle": str(srt) if srt.exists() else None, "ocr_report": ocr_report, "splice": {"video": str(highlight), "start": highlight_start, "ai_end": ai_end, "review_clip": str(review_clip)} if highlight else None}
     (output_dir / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(manifest, ensure_ascii=False))
 

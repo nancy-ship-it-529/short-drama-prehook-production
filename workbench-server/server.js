@@ -56,7 +56,7 @@ const UNIFIED_PRODUCTION_RULES = `统一成片规则（所有方案必须执行�
 - 字幕声画锁定：Seedance画面默认要求无内置字幕，后期字幕必须使用固定格式“字幕时码：00:02.000 --> 00:05.500｜说话人｜准确对白”。最终时码不得照抄提示词预估值，必须在变速完成后根据最终音轨的ASR/VAD与词级时间重新对齐：首字只能在实际开口后出现，尾字说完即消失；动物叫声、吸气、反应、静音和奔跑区间不得提前挂出下一句字幕。同一句按逗号分句展示，逐句校对说话人和准确对白，OCR与目标文本不一致则不得标记完成。若Seedance意外生成字幕，文字完全正确才保留且不叠第二层；只有个别错字时只定位并修补错字区域；不得用整条黑带或整句重复字幕覆盖画面。
 - 原片边界绝不能混用：单爆点、递进剧情、猎奇类前贴只在所选起量高光视频完整文件之前新增AI前贴；高光视频从00:00:00.000开始原样接入，不截掉任何开头画面或声音。先实际查看该完整高光视频的首帧、首句和开场事件，再倒推前贴的结尾动作；如果AI不能接上0秒开头，就重写前贴方案，不能把原片改从中段播放。只有起量高光复刻去重允许用AI重生段替换原片开头，原片从被替换区间的真实结束点接回。
 - 原片衔接核验：每个方案必须先实际查看候选原片，再锁定唯一视频、完整绝对路径、模式允许的精确切入时码，以及该点第一句完整台词和首帧画面。多条原片时逐条比对剧情和人物，绝不能选目录第一条或按文件名猜。单爆点/递进/猎奇提示词必须写“衔接完整原片：《文件名.mp4》00:00:00.000｜首句：……｜首帧：……”；复刻提示词写明替换区间与接回原片的毫秒时码。生成前校验实际采用的文件与提示词一致；成片后查看切点前后画面与声音，排除错片、重复句、跳帧、冻帧、黑帧和音频抢入。不确定时停止自动拼接并标记待复核。
-- 直接制作：每个方案都必须给出可直接生成的完整Seedance提示词、准确时长、9:16、720p、Seedance原声、无水印和明确的原片衔接动作；只生成付费前确认单，未经用户确认不得创建付费视频任务。`;
+- 直接制作：每个方案都必须给出可直接生成的完整Seedance提示词、准确时长、与原片及用户选择一致的画幅（9:16、16:9或1:1）、720p、Seedance原声、无水印和明确的原片衔接动作；后期保持所选画幅。只生成付费前确认单，未经用户确认不得创建付费视频任务。`;
 
 fs.mkdirSync(TASKS, { recursive: true });
 fs.mkdirSync(BATCHES, { recursive: true });
@@ -161,7 +161,7 @@ ${UNIFIED_PRODUCTION_RULES}
 0. 按要求输出恰好${input.count}条“## 方案一/二/三”方案；每个方案正文第一行必须是“钩子：一句来自已核实原片开头的视觉冲突”，不同方案的镜头钩子不得完全重复。
 1. 每张人物截图单独一行，写“内部核验图1”和已验证存在的绝对路径，路径必须放在单个反引号内；例如：内部核验图1｜林明远｜人物与服装核验｜原片00:02.4｜\`C:\\绝对路径\\林明远.jpg\`。不得把内部核验图写成正式Seedance的@图片素材。
 2. 每个可独立生成的片段必须使用三级标题“### Seedance提示词（片段1）”，标题下只放该片段可以直接复制使用的完整提示词；提示词不得包含任何@图片引用，角色外观全部用文字描述。
-3. 每段提示词后使用固定格式“生成参数建议：X秒｜9:16｜720p｜生成对白和环境音｜无水印”，X为4至15的整数；参数不要混入提示词代码块。
+3. 每段提示词后使用固定格式“生成参数建议：X秒｜画幅｜720p｜生成对白和环境音｜无水印”，X为4至15的整数；画幅须根据核验原片或用户要求填写9:16、16:9或1:1，默认9:16；参数不要混入提示词代码块。
 4. 内部核验图必须截取并保存到当前任务目录或工作区可访问目录，不能只给时间码、不能写待生成路径、不能用环境图充当人物图；它们不进入正式生成请求。
 5. 对白必须写进Seedance提示词，包含说话人、原句、情绪、语速与停顿；禁止只在提示词外另列对白。
 5a. 每句对白还须在同一提示词代码块内逐句列出“字幕时码：00:02.000 --> 00:05.500｜说话人｜准确对白”；这些仅为生成目标，不是最终字幕时码，变速后须按实声重对齐。
@@ -187,7 +187,7 @@ ${UNIFIED_PRODUCTION_RULES}
 
 只新增AI前贴，不替换或裁剪原高光；原片必须从00:00:00.000完整接入。若提供多条素材，逐条看首帧、首句和关键动作，锁定唯一文件；反推AI尾镜时写清“前贴末动作 → 原片00:00.000首画面/首句”的逻辑，不匹配就改前贴。没有可读原片时明确标“待核片”，不要伪造衔接点。人物默认虚构成年人，外观用文字描述；真人原片截图只做内部核验，不上传Seedance。角色对白需明确说话人、情绪和开口时码；Seedance生成同期人声与自然口型，画面无字幕、无标题、无角标、无Logo、无水印；后期字幕依实际音频对齐，不可提前挂字。
 
-案例Markdown只保留“## 方案一/二/三”等方案。每方案先写“钩子：……”及“样片参考：编号/标题｜保留结构｜替换剧情”（若无可用样片须写“规则创作”）；再以“### Seedance提示词（片段1）”和text代码块给出完整可复制提示词。每段代码块后写“生成参数建议：X秒｜9:16｜720p｜生成对白和环境音｜无水印”。超过15秒续写片段2，清楚写前段末帧与后段首帧。对白行用“字幕时码：00:02.000 --> 00:05.500｜说话人｜准确台词”列出预估起止，后期仍以实声校准。已核实的内部人物截图可在末尾列路径，不写@图片引用。写出“衔接完整原片：《准确文件名.mp4》00:00:00.000｜首句：……｜首帧：……”，此行也要在Seedance提示词内，供工作台校验。
+案例Markdown只保留“## 方案一/二/三”等方案。每方案先写“钩子：……”及“样片参考：编号/标题｜保留结构｜替换剧情”（若无可用样片须写“规则创作”）；再以“### Seedance提示词（片段1）”和text代码块给出完整可复制提示词。每段代码块后写“生成参数建议：X秒｜画幅｜720p｜生成对白和环境音｜无水印”，画幅按已核验原片或用户要求填写9:16、16:9或1:1，默认9:16。超过15秒续写片段2，清楚写前段末帧与后段首帧。对白行用“字幕时码：00:02.000 --> 00:05.500｜说话人｜准确台词”列出预估起止，后期仍以实声校准。已核实的内部人物截图可在末尾列路径，不写@图片引用。写出“衔接完整原片：《准确文件名.mp4》00:00:00.000｜首句：……｜首帧：……”，此行也要在Seedance提示词内，供工作台校验。
 
 ${PREHOOK_CAPTION_RULES}
 
@@ -235,7 +235,7 @@ ${creativeRules}
 2. 每个方案先用一行写“钩子：……”；再写三级标题“### Seedance提示词（片段1）”，标题下用text代码块只放可直接生成的完整提示词。
 3. 提示词内必须包含人物设定、场景、情绪、动作、逐句对白、镜头节奏、原片衔接画面，以及“无字幕、无标题、无角标、无Logo、无水印”；人物对白由Seedance同期生成，不能移到提示词外。
 4. 每句需要后期添加的对白，在提示词中另起一行使用固定格式：\`字幕时码：00:02.000 --> 00:05.500｜鹦鹉｜林先生，你老婆把男人藏在婚房柜子后面！\`。字幕起点必须是该角色实际开口的时刻，终点必须是尾字说完的时刻；没有说话的救助动作、奔跑和衔接画面不得出现这句字幕。
-5. 代码块后只保留一行“生成参数建议：X秒｜9:16｜720p｜生成对白和环境音｜无水印”。时长必须根据该方案真实节奏填写，4至15秒；超过15秒拆成片段2，并分别提供可生成提示词。
+5. 代码块后只保留一行“生成参数建议：X秒｜画幅｜720p｜生成对白和环境音｜无水印”，画幅填写9:16、16:9或1:1。时长必须根据该方案真实节奏填写，4至15秒；超过15秒拆成片段2，并分别提供可生成提示词。
 6. 如有已验证的内部核验图，只在方案末尾用一行列出，不写成@图片，不带入生成；没有就省略。
  7. 不单独输出秒级时间表、参考图表或衔接说明表；这些信息全部压缩进Seedance提示词。无声画面文案按下方独立于提示词代码块的固定格式输出。
 
@@ -613,7 +613,7 @@ async function prepareSeedance(input) {
     if (!fs.existsSync(sourceInputFile)) throw new Error('来源任务不存在，不能核对原片');
     const sourceInput = JSON.parse(fs.readFileSync(sourceInputFile, 'utf8'));
     if (sourceMode && sourceInput.mode !== sourceMode) throw new Error('生成模式与来源任务不一致，请从对应案例重新打开');
-    if (input.ratio !== '9:16' || input.resolution !== '720p' || input.generateAudio !== true || input.watermark === true) throw new Error('当前前贴只能按9:16、720p、Seedance同期原声、无水印准备');
+    if (!['9:16', '16:9', '1:1'].includes(input.ratio) || input.resolution !== '720p' || input.generateAudio !== true || input.watermark === true) throw new Error('当前前贴支持9:16、16:9和1:1；分辨率须为720p，并启用Seedance同期原声、关闭水印');
     if (sourceInput.mode === 'remake') {
       const declared = String(input.prompt || '').match(/接回原片[：:]\s*00:(\d{2})\.(\d{3})/);
       const expected = Number(sourceInput.remakeCutSeconds || 15);
@@ -702,7 +702,7 @@ function confirmSeedance(id) {
           nextState.postBlockedReason = '已保留Seedance原始视频；单爆点/递进/猎奇禁止裁剪原高光开头，请重写衔接后再制作。';
         } else {
           const hasSeedanceAudio = Boolean(nextState.generationPayload?.generate_audio);
-          const post = startPostPipeline({ aiVideo: result.video_url, highlightVideo: nextState.spliceVideo || '', highlightStart: nextState.spliceStart || 0, speedFactor: nextState.speedFactor || 1.2, narration: hasSeedanceAudio ? '' : nextState.postDialogue, subtitleText: nextState.postDialogue, voice: 'zh-CN-YunxiNeural', burnSubtitles: true, coverExistingSubtitles: true });
+          const post = startPostPipeline({ aiVideo: result.video_url, highlightVideo: nextState.spliceVideo || '', highlightStart: nextState.spliceStart || 0, ratio: nextState.generationPayload?.ratio || '9:16', speedFactor: nextState.speedFactor || 1.2, narration: hasSeedanceAudio ? '' : nextState.postDialogue, subtitleText: nextState.postDialogue, voice: 'zh-CN-YunxiNeural', burnSubtitles: true, coverExistingSubtitles: true });
           nextState.postJobId = post.id;
           nextState.state = 'post_processing';
         }
@@ -773,7 +773,7 @@ function retrySeedancePost(id, directSubtitles = false) {
   const hasSeedanceAudio = Boolean(status.generationPayload?.generate_audio);
   const prompt = status.generationPayload?.content?.find(item => item.type === 'text')?.text || '';
   const correctedSplice = status.spliceLocked ? { video: status.spliceVideo, start: Number(status.spliceStart || 0) } : extractSpliceTarget(prompt, status.sourceTaskId || '', status.sourceMode || '');
-  const post = startPostPipeline({ aiVideo: status.cachedRaw, highlightVideo: correctedSplice.video || status.spliceVideo || '', highlightStart: correctedSplice.start || status.spliceStart || 0, speedFactor: status.speedFactor || 1.2, narration: hasSeedanceAudio ? '' : status.postDialogue, subtitleText: status.postDialogue, voice: 'zh-CN-YunxiNeural', burnSubtitles: true, coverExistingSubtitles: true, smartOcrRepair: !directSubtitles });
+  const post = startPostPipeline({ aiVideo: status.cachedRaw, highlightVideo: correctedSplice.video || status.spliceVideo || '', highlightStart: correctedSplice.start || status.spliceStart || 0, ratio: status.generationPayload?.ratio || '9:16', speedFactor: status.speedFactor || 1.2, narration: hasSeedanceAudio ? '' : status.postDialogue, subtitleText: status.postDialogue, voice: 'zh-CN-YunxiNeural', burnSubtitles: true, coverExistingSubtitles: true, smartOcrRepair: !directSubtitles });
   const statusFile = path.join(SEEDANCE_JOBS, id, 'status.json');
   safeWrite(statusFile, { ...status, state: 'post_processing', postJobId: post.id, spliceVideo: correctedSplice.video || status.spliceVideo || '', spliceStart: correctedSplice.start || status.spliceStart || 0, speedFactor: status.speedFactor || 1.2, cacheError: '', repostedAt: new Date().toISOString() });
   return seedanceState(id);
@@ -1066,7 +1066,7 @@ function startPostPipeline(input) {
   const jobDir = path.join(POST_JOBS, id); fs.mkdirSync(jobDir, { recursive: true });
   const outputDir = path.join(POST_OUTPUTS, id); fs.mkdirSync(outputDir, { recursive: true });
   const speedFactor = Number(input.speedFactor) === 1.5 ? 1.5 : 1.2;
-  const request = { ai_video: aiVideo, highlight_video: highlightVideo, highlight_start: Math.max(0, Number(input.highlightStart) || 0), speed_factor: speedFactor, narration: typeof input.narration === 'string' ? input.narration.trim() : '', subtitle_text: typeof input.subtitleText === 'string' ? input.subtitleText.trim() : '', voice: input.voice || 'zh-CN-XiaoxiaoNeural', bgm, burn_subtitles: input.burnSubtitles !== false, cover_existing_subtitles: input.coverExistingSubtitles === true, smart_ocr_repair: input.smartOcrRepair !== false, output_dir: outputDir };
+  const request = { ai_video: aiVideo, highlight_video: highlightVideo, highlight_start: Math.max(0, Number(input.highlightStart) || 0), ratio: ['9:16', '16:9', '1:1'].includes(input.ratio) ? input.ratio : '9:16', speed_factor: speedFactor, narration: typeof input.narration === 'string' ? input.narration.trim() : '', subtitle_text: typeof input.subtitleText === 'string' ? input.subtitleText.trim() : '', voice: input.voice || 'zh-CN-XiaoxiaoNeural', bgm, burn_subtitles: input.burnSubtitles !== false, cover_existing_subtitles: input.coverExistingSubtitles === true, smart_ocr_repair: input.smartOcrRepair !== false, output_dir: outputDir };
   const requestFile = path.join(os.tmpdir(), `post-pipeline-${id}.json`); fs.writeFileSync(requestFile, JSON.stringify(request, null, 2), 'utf8');
   const statusFile = path.join(jobDir, 'status.json'); safeWrite(statusFile, { id, state: 'running', createdAt: new Date().toISOString(), stages: { voice: request.narration ? 'running' : 'skipped', edit: 'queued', upload: 'not_requested' } });
   const child = spawn(PYTHON, [path.join(ROOT, 'scripts', 'post_pipeline.py'), '--request-file', requestFile], { cwd: ROOT, windowsHide: true, env: { ...process.env, PYTHONIOENCODING: 'utf-8' }, stdio: ['ignore', 'pipe', 'pipe'] });
@@ -1183,7 +1183,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${HOST}:${PORT}`);
   if (req.method === 'GET' && url.pathname === '/api/health') {
     const login = await codexLoginStatus();
-    json(res, 200, { ok: true, version: '3.4.2', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
+    json(res, 200, { ok: true, version: '3.5.0', instance: crypto.createHash('sha256').update(ROOT).digest('hex').slice(0, 16), modes: MODE_ORDER, ...login, ocrInstalled: runtime.capabilities().ocr.available && fs.existsSync(OCR_SCRIPT) });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/tasks') {
@@ -1297,7 +1297,7 @@ const server = http.createServer(async (req, res) => {
     catch (error) { return json(res, 400, { error: error.message }); }
   }
   if (req.method === 'GET' && url.pathname === '/api/pipeline/capabilities') {
-    return json(res, 200, { ...runtime.capabilities(), version: '3.4.2' });
+    return json(res, 200, { ...runtime.capabilities(), version: '3.5.0' });
   }
   if (req.method === 'GET' && url.pathname === '/api/library') return json(res, 200, { items: mediaLibrary() });
   if (req.method === 'GET' && url.pathname === '/api/local-image') {

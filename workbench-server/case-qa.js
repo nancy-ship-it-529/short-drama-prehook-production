@@ -45,7 +45,7 @@ function validateCase(content, input = {}) {
       const prefix = `${label}片段${blockIndex + 1}`;
       const prompt = block.body.match(/```(?:text)?\s*\r?\n([\s\S]*?)\r?\n```/)?.[1]?.trim() || '';
       if (!prompt) { errors.push(`${prefix}提示词代码块为空`); return; }
-      const params = block.body.match(/生成参数建议[：:]\s*(\d+)秒\s*｜\s*9:16\s*｜\s*720p\s*｜\s*生成对白和环境音\s*｜\s*无水印/);
+      const params = block.body.match(/生成参数建议[：:]\s*(\d+)秒\s*｜\s*(?:9:16|16:9|1:1)\s*｜\s*720p\s*｜\s*生成对白和环境音\s*｜\s*无水印/);
       if (!params) { errors.push(`${prefix}生成参数不完整`); return; }
       const duration = Number(params[1]);
       if (duration < 4 || duration > 15) errors.push(`${prefix}时长必须在4至15秒之间`);
