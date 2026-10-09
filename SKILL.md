@@ -2,7 +2,7 @@
 name: short-drama-prehook-production
 description: 默认并行制作单爆点、递进、复刻和猎奇四类短剧 AI 二创前贴，并在脚本阶段预生成可选的无声吸睛画面文案；核验原片、付费确认、字幕、拼接与成片验收，并分发制作规则。
 metadata:
-  version: 3.2.0
+  version: 3.3.0
 ---
 
 # 短剧二创前贴制作
